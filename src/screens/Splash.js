@@ -2,6 +2,7 @@ import {View, Text, SafeAreaView, Image, ImageBackground} from 'react-native';
 import React, {useEffect} from 'react';
 import LinearGradient from 'react-native-linear-gradient';
 import StyleSheet from '../StyleSheet/StyleSheet';
+import * as Animatable from 'react-native-animatable';
 
 export default function Splash({navigation}) {
   useEffect(() => {
@@ -15,11 +16,14 @@ export default function Splash({navigation}) {
       end={{x: 0.0, y: 1.0}}
       colors={['#f0d3af', '#f0d3af', '#ab8c67']}
       style={StyleSheet.splashView}>
-      <Image
+      <Animatable.Image
+        animation="slideInUp"
         style={StyleSheet.logoimg}
-        source={require('../assets/logo.jpg')}
-      />
-      <Text style={StyleSheet.logoname}>Notes</Text>
+        source={require('../assets/logo.jpg')}></Animatable.Image>
+
+      <Animatable.Text animation="slideInUp" style={StyleSheet.logoname}>
+        Notes
+      </Animatable.Text>
     </LinearGradient>
   );
 }

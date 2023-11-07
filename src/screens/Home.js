@@ -6,132 +6,141 @@ import {
   TextInput,
   Image,
   TouchableOpacity,
-  Dimensions,
 } from 'react-native';
 import {FlatGrid} from 'react-native-super-grid';
 import GridView from '../components/GridView';
 import StyleSheet from '../StyleSheet/StyleSheet';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {useIsFocused} from '@react-navigation/native';
+import Dialog, {
+  DialogContent,
+  DialogButton,
+  DialogTitle,
+} from 'react-native-popup-dialog';
+import colours from '../global/colours';
+import {useDispatch, useSelector} from 'react-redux';
+import {changeTheme} from '../redux/ThemeSlice';
 
-const width = Dimensions.get('screen').width;
-const height = Dimensions.get('screen').height;
+var timeout;
+let List = [];
+
 export default function Home({navigation}) {
-  const data = [
-    {
-      tittle: 'What is Lorem Ipsum?',
-      description:
-        "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-    },
-    {
-      tittle: 'Why do we use it?',
-      description:
-        "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English. Many desktop publishing packages and web page editors now use Lorem Ipsum as their default model text, and a search for 'lorem ipsum' will uncover many web sites still in their infancy. Various versions have evolved over the years, sometimes by accident, sometimes on purpose (injected humour and the like).",
-    },
-    {
-      tittle: 'Where does it come from?',
-      description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ultrices sagittis orci a scelerisque purus.',
-    },
-    {
-      tittle: 'Where can I get some?',
-      description:
-        'Purus gravida quis blandit turpis cursus in. Amet nisl purus in mollis nunc sed.',
-    },
-    {
-      tittle: "Today's work",
-      description:
-        "There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected humour, or randomised words which don't look even slightly believable.",
-    },
-    {
-      tittle: 'Science notes',
-      description:
-        "If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text.",
-    },
-    {
-      tittle: 'NEPHRITIS',
-      description:
-        'All the Lorem Ipsum generators on the Internet tend to repeat predefined chunks as necessary, making this the first true generator on the Internet.',
-    },
-    {
-      tittle: 'PETER n appsuch a ntation.RIVER',
-      description:
-        ' It uses a dictionary of over 200 Latin words, combined with a handful of model sentence structures, to generate Lorem Ipsum which looks reasonable. ',
-    },
-    {
-      tittle: 'Office work ',
-      description:
-        "This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum. If you are going to use a passage of Lorem Ipsum, you need to be sure there isn't anything embarrassing hidden in the middle of text.",
-    },
-    {
-      tittle: 'EMERALD',
-      description:
-        'It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters,',
-    },
-    {
-      tittle: 'PETER RIVER',
-      description:
-        "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.",
-    },
-  ];
+  useEffect(() => {
+    GetTheme();
+  }, []);
 
-  const [filterData, setFilterData] = useState(data);
+  const Theme = useSelector(state => state.Theme);
+
+  const dispatch = useDispatch();
+
+  const [data, setData] = useState([]);
+  const [displayList, setdisplayList] = useState([]);
   const [search, setsearch] = useState('');
+  const isFocused = useIsFocused();
+  const [viewType, setviewType] = useState(true);
+  const [show, setShow] = useState(false);
 
-  const searchFilter = text => {
-    if (text) {
-      const newData = data.filter(item => {
-        return item.tittle.toUpperCase().indexOf(text.toUpperCase()) > -1;
-      });
+  useEffect(() => {
+    getData();
+  }, [isFocused]);
 
-      setFilterData(newData);
-      setsearch(text);
+  const getData = async () => {
+    let Notes = await AsyncStorage.getItem('noteList');
+    if (Notes == null || Notes == undefined) {
+      setData([]);
+      setdisplayList([]);
     } else {
-      setsearch('');
-      setFilterData(data);
+      let Update = JSON.parse(Notes);
+
+      List = [...Update];
+      setData(List);
+      setdisplayList(List);
     }
   };
+
+  const searchFilter = val => {
+    setsearch(val);
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      if (val?.length == 0) {
+        setdisplayList(data);
+      } else {
+        const newData = data.filter(item => {
+          return item?.title?.toUpperCase().indexOf(val.toUpperCase()) > -1;
+        });
+        setdisplayList(newData);
+      }
+    }, 0);
+  };
+
+  const removeData = index => {
+    const array = [...displayList];
+    array.splice(index, 1);
+    AsyncStorage.setItem('noteList', JSON.stringify(array));
+    setdisplayList(array);
+  };
+  const GetTheme = async () => {
+    let colour = await AsyncStorage.getItem('theme');
+    dispatch(changeTheme(colour));
+  };
+
   return (
-    <SafeAreaView style={StyleSheet.maincontainer}>
+    <SafeAreaView style={{flex: 1, backgroundColor: colours().secodary}}>
       <View style={StyleSheet.container}>
-        <View style={StyleSheet.topbar}>
-          <View style={{width: 25}}></View>
-          <Text style={StyleSheet.heading}>Notes</Text>
-          <TouchableOpacity style={{alignSelf: 'center'}}>
+        <View style={StyleSheet.Topbar}>
+          <TouchableOpacity
+            style={{alignSelf: 'center'}}
+            onPress={() => {
+              setShow(true);
+            }}>
             <Image
-              style={StyleSheet.dot}
-              source={require('../assets/options.png')}
+              style={[StyleSheet.ThemeIcon, {tintColor: colours().primary}]}
+              source={require('../assets/theme.png')}
             />
           </TouchableOpacity>
+          <View></View>
+          <Text style={[StyleSheet.Heading, {color: colours().primary}]}>
+            Notes
+          </Text>
+
+          <View style={StyleSheet.TopRight}>
+            <TouchableOpacity
+              style={{paddingHorizontal: 15}}
+              onPress={() => setviewType(true)}>
+              <Image
+                style={[StyleSheet.GridIcon, {tintColor: colours().primary}]}
+                source={require('../assets/grid.png')}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setviewType(false)}>
+              <Image
+                style={[
+                  StyleSheet.GridListIcon,
+                  {tintColor: colours().primary},
+                ]}
+                source={require('../assets/task.png')}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View style={StyleSheet.SearchView}>
+        <View style={[StyleSheet.SearchView, {borderColor: colours().primary}]}>
           <Image
-            style={StyleSheet.SearchImg}
+            style={[StyleSheet.SearchImg, {tintColor: colours().primary}]}
             source={require('../assets/search1.png')}
           />
           <TextInput
             style={StyleSheet.searchText}
             placeholder="Search notes"
-            placeholderTextColor="#9e7542"
-            selectionColor="brown"
+            placeholderTextColor={colours().primary}
+            selectionColor={colours().primary}
             value={search}
             onChangeText={text => searchFilter(text)}
           />
         </View>
       </View>
-      {filterData.length > 0 ? (
-        <FlatGrid
-          style={{marginTop: 5}}
-          showsVerticalScrollIndicator={false}
-          data={filterData}
-          renderItem={({item, index}) => (
-            <GridView
-              tittle={item.tittle}
-              code={item.code}
-              description={item.description}
-            />
-          )}
-        />
-      ) : (
+
+      {displayList.length == 0 ? (
         <View style={StyleSheet.BlankView}>
           <Image
             style={StyleSheet.Noteimg}
@@ -139,15 +148,72 @@ export default function Home({navigation}) {
           />
           <Text style={StyleSheet.Textnotes}>No notes here yet</Text>
         </View>
+      ) : (
+        <FlatGrid
+          maxItemsPerRow={viewType ? 2 : 1}
+          style={{marginTop: 5}}
+          showsVerticalScrollIndicator={false}
+          data={displayList.reverse()}
+          renderItem={({item, index}) => (
+            <GridView
+              tittle={item.title}
+              description={item.description}
+              date={item.date}
+              OnClick={item}
+              del={() => removeData(index)}
+              index={index}
+            />
+          )}
+        />
       )}
+
       <TouchableOpacity
-        onPress={() => navigation.navigate('AddNote')}
+        onPress={() =>
+          navigation.navigate('AddNote', {item: {}, type: 'Add', index: -1})
+        }
         style={StyleSheet.plus}>
         <Image
-          style={StyleSheet.Plusimg}
+          style={[StyleSheet.Plusimg, {tintColor: colours().primary}]}
           source={require('../assets/plus.png')}
         />
       </TouchableOpacity>
+      {/* <TouchableOpacity onPress={() => navigation.navigate('Practice')}>
+        <Text>Practice</Text>
+      </TouchableOpacity> */}
+      <View>
+        <Dialog
+          visible={show}
+          dialogTitle={<DialogTitle title=" Theme Colour" />}>
+          <DialogContent>
+            <View style={StyleSheet.DialogView}>
+              <DialogButton
+                text="red"
+                onPress={() => {
+                  dispatch(changeTheme('LIGHT'));
+                  setShow(false);
+                  AsyncStorage.setItem('theme', 'LIGHT');
+                }}
+              />
+              <DialogButton
+                text="Green"
+                onPress={() => {
+                  dispatch(changeTheme('DARK'));
+                  setShow(false);
+                  AsyncStorage.setItem('theme', 'DARK');
+                }}
+              />
+              <DialogButton
+                text="Brown"
+                onPress={() => {
+                  dispatch(changeTheme('BROWN'));
+                  setShow(false);
+                  AsyncStorage.setItem('theme', 'BROWN');
+                }}
+              />
+            </View>
+          </DialogContent>
+        </Dialog>
+      </View>
     </SafeAreaView>
   );
 }
